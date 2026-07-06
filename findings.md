@@ -2,11 +2,26 @@
 
 This set is cleaned so each finding is independently observable and scoped to one primary problem.
 
+## Prioritization System
+
+I will use a custom **Priority Heat Score (PHS-4)** system for corrective findings.
+
+- **Impact (1-5):** how much the issue hurts users
+- **Mobile Severity (1-5):** how much worse it is under throttled mobile conditions
+- **Breadth (1-5):** how many metrics or user experiences the issue affects
+- **Effort (1-5):** how practical the fix is, where 5 means easiest
+
+**Formula:** `PHS = Impact + Mobile Severity + Breadth + Effort`
+
+The highest possible score is 20. Higher scores mean higher priority.
+
 ## Corrective Findings
 
 ## 1) Initial page render is significantly delayed
 
 - Type: Corrective
+- Ratings: Impact 5, Mobile Severity 4, Breadth 4, Effort 3
+- Priority Heat Score: 16/20
 - Observable signal: FCP 9.1 s (mobile), 3.4 s (desktop); Speed Index 22.3 s (mobile), 15.7 s (desktop)
 - How this affects users:
   Users wait too long before meaningful content appears, which increases bounce risk.
@@ -20,6 +35,8 @@ This set is cleaned so each finding is independently observable and scoped to on
 ## 2) Initial visual load (main content) is significantly delayed
 
 - Type: Corrective
+- Ratings: Impact 5, Mobile Severity 5, Breadth 5, Effort 2
+- Priority Heat Score: 17/20
 - Observable signal: LCP 54.3 s (mobile), 17.2 s (desktop)
 - How this affects users:
   The page appears incomplete for too long; users may leave before seeing the main story.
@@ -33,6 +50,8 @@ This set is cleaned so each finding is independently observable and scoped to on
 ## 3) Initial page functionality is significantly delayed
 
 - Type: Corrective
+- Ratings: Impact 5, Mobile Severity 5, Breadth 5, Effort 2
+- Priority Heat Score: 17/20
 - Observable signal: TTI 56.8 s (mobile), 21.0 s (desktop); TBT 18,020 ms (mobile), 4,530 ms (desktop)
 - How this affects users:
   Page appears loaded but interaction is delayed or janky (scroll/tap/menu responsiveness).
@@ -46,6 +65,8 @@ This set is cleaned so each finding is independently observable and scoped to on
 ## 4) Image loading order does not consistently match user need
 
 - Type: Corrective
+- Ratings: Impact 4, Mobile Severity 4, Breadth 3, Effort 3
+- Priority Heat Score: 14/20
 - Observable signal: 67 image requests and 3.46 MB image transfer on cold load; poor LCP/Speed Index together indicate image priority issues
 - How this affects users:
   High-value visual content can be delayed while lower-priority imagery also competes for bandwidth.
@@ -59,6 +80,8 @@ This set is cleaned so each finding is independently observable and scoped to on
 ## 5) Delayed ad and third-party slots hurt perceived stability
 
 - Type: Corrective
+- Ratings: Impact 4, Mobile Severity 4, Breadth 4, Effort 2
+- Priority Heat Score: 14/20
 - Observable signal: very high third-party script/network activity during early render; low Best Practices score (54)
 - How this affects users:
   Layout feels unstable or "still loading" for too long, reducing trust and readability.
@@ -72,6 +95,8 @@ This set is cleaned so each finding is independently observable and scoped to on
 ## 6) Accessibility baseline indicates semantic/control gaps
 
 - Type: Corrective
+- Ratings: Impact 3, Mobile Severity 3, Breadth 3, Effort 3
+- Priority Heat Score: 12/20
 - Observable signal: Accessibility score 76 (mobile), 79 (desktop)
 - How this affects users:
   Assistive technology users may struggle with controls, labels, or page structure clarity.
@@ -85,6 +110,8 @@ This set is cleaned so each finding is independently observable and scoped to on
 ## 7) Homepage payload size is too large
 
 - Type: Corrective (Additional)
+- Ratings: Impact 5, Mobile Severity 5, Breadth 5, Effort 2
+- Priority Heat Score: 17/20
 - Observable signal: 9.55 MB transferred, 25.96 MB total resource size on cold load
 - How this affects users:
   Users on mobile networks face slower loads and higher data usage costs.
@@ -98,6 +125,8 @@ This set is cleaned so each finding is independently observable and scoped to on
 ## 8) Warm-load cache benefit is weak in transferred bytes
 
 - Type: Corrective (Additional)
+- Ratings: Impact 4, Mobile Severity 4, Breadth 4, Effort 3
+- Priority Heat Score: 15/20
 - Observable signal: only 1.08% transfer reduction from cold to warm run (9.55 MB to 9.45 MB)
 - How this affects users:
   Repeat visits and soft refreshes remain expensive instead of feeling noticeably faster.
@@ -137,6 +166,8 @@ This set is cleaned so each finding is independently observable and scoped to on
 ## 11) Mobile throttling exposes severe first-load delay on the homepage
 
 - Type: Corrective
+- Ratings: Impact 5, Mobile Severity 5, Breadth 5, Effort 2
+- Priority Heat Score: 17/20
 - Observable signal: Mobile LCP 54.3 s, Mobile TTI 56.8 s, Mobile TBT 18,020 ms, Mobile Speed Index 22.3 s
 - How this affects users:
   On slower mobile conditions, the homepage feels unusable for a long time and content arrives far too late.
@@ -150,6 +181,8 @@ This set is cleaned so each finding is independently observable and scoped to on
 ## 12) Mobile network payload is too heavy for throttled conditions
 
 - Type: Corrective
+- Ratings: Impact 5, Mobile Severity 5, Breadth 5, Effort 2
+- Priority Heat Score: 17/20
 - Observable signal: Mobile cold transfer 9.55 MB, 271 requests, and only 1.08% warm-load transfer reduction
 - How this affects users:
   Mobile users spend too long waiting and consume more data, especially on constrained connections.
@@ -168,3 +201,9 @@ This set is cleaned so each finding is independently observable and scoped to on
 4. Improve repeat-load cache byte savings (Finding 8)
 5. Stabilize ad/third-party rendering and improve accessibility compliance (Findings 5 and 6)
 6. Address mobile-specific first-load delay and payload pressure (Findings 11 and 12)
+
+## Final Score
+
+- Corrective findings scored with PHS-4: 16, 17, 17, 14, 14, 12, 17, 15, 17, 17
+- Average corrective score: 15.6/20
+- Final score as a percentage: 78/100
