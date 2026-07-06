@@ -85,3 +85,67 @@ Based on severity and user impact, the initial remediation order should be:
 3. Remove unused JS/CSS from initial load
 4. Improve critical rendering path for FCP/Speed Index
 5. Resolve best-practice/runtime reliability issues
+
+## Additional Networking Findings
+
+## 6) Request count is very high on the primary page
+
+- **How this affects users:**
+  More requests increase connection overhead and make page load more sensitive to unstable networks, which slows down first load and increases failure risk.
+- **Affected metric(s):**
+  - Network requests: 271 on cold load
+  - Related impact on FCP, LCP, and Speed Index due to request waterfall pressure
+- **Cause (most likely):**
+  Many separate resources across first-party content blocks, media assets, and third-party scripts.
+- **Likely solution:**
+  Reduce request fan-out:
+  - Remove unnecessary third-party calls.
+  - Consolidate and defer non-critical requests.
+  - Use lazy loading for below-the-fold assets.
+
+## 7) Transfer and total resource size are excessively large
+
+- **How this affects users:**
+  Large payloads increase waiting time, especially on mobile data, and raise data usage costs for users.
+- **Affected metric(s):**
+  - Cold transfer size: 9.55 MB
+  - Total resource size: 25.96 MB
+  - Compression reduction: 63.22% (good compression but still very large payload)
+- **Cause (most likely):**
+  Heavy front page composition with large script/CSS bundles and substantial media volume.
+- **Likely solution:**
+  Shrink bytes shipped on initial load:
+  - Aggressively trim unused JS/CSS.
+  - Delay non-essential modules and media.
+  - Optimize image delivery and responsive sizing.
+
+## 8) Soft refresh shows weak cache benefit
+
+- **How this affects users:**
+  Repeat visits and in-session refreshes stay expensive, so users do not get the expected faster second load.
+- **Affected metric(s):**
+  - Warm transfer size: 9.45 MB
+  - Transfer reduction vs cold: only 1.08%
+  - Cached requests observed: 3
+- **Cause (most likely):**
+  Cache policies and request patterns that limit effective reuse (short TTL/no-store/private responses or frequently changing URLs/params).
+- **Likely solution:**
+  Improve cacheability:
+  - Increase TTL for stable static assets.
+  - Use immutable hashed assets for JS/CSS/media.
+  - Minimize cache-busting patterns for unchanged resources.
+
+## 9) JS/CSS and image payload mix is still too heavy
+
+- **How this affects users:**
+  Users pay large download and processing costs from both code and media, which delays rendering and interactivity.
+- **Affected metric(s):**
+  - JS/CSS transfer: 4.57 MB (47.88% of total), 72.60% compressed
+  - Images transfer: 3.46 MB (36.19% of total), effectively no extra content-encoding compression
+- **Cause (most likely):**
+  Overweight script/style payload plus high image byte volume on the homepage.
+- **Likely solution:**
+  Rebalance code and media budgets:
+  - Enforce JS/CSS size budgets and split critical vs non-critical code.
+  - Use responsive images with stricter byte targets per viewport.
+  - Defer non-critical images and improve priority hints for key visuals.

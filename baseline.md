@@ -71,3 +71,44 @@ From Lighthouse opportunities/diagnostics on the primary page:
 - **Main-thread work breakdown:** flagged as poor on both mobile and desktop
 
 These bottlenecks align with the very poor LCP, TTI, and TBT values above.
+
+## Networking Baseline (Primary Page)
+
+Network capture source: Lighthouse `network-requests` audit on homepage, with a cold run and a warm run using the same browser profile to approximate soft refresh caching behavior.
+
+### Request volume
+
+- **Cold load requests:** 271
+- **Warm run requests:** 242
+
+### Transfer and total resource size
+
+- **Cold load transfer size:** 9,548,467 bytes (about 9.55 MB)
+- **Cold load total resource size:** 25,960,060 bytes (about 25.96 MB)
+- **Compression reduction (cold):** 63.22%
+
+### Soft refresh and caching effect
+
+- **Warm run transfer size:** 9,445,245 bytes (about 9.45 MB)
+- **Transfer reduction vs cold:** 1.08%
+- **Cached requests observed (warm):** 3
+
+### JS/CSS vs images
+
+- **JS/CSS**
+  - requests: 98
+  - transfer: 4,571,886 bytes (47.88% of total transfer)
+  - total resource size: 16,684,040 bytes
+  - estimated compression reduction: 72.60%
+
+- **Images**
+  - requests: 67
+  - transfer: 3,455,505 bytes (36.19% of total transfer)
+  - total resource size: 3,440,302 bytes
+  - estimated compression reduction: -0.44% (effectively no additional content-encoding compression)
+
+### Networking interpretation notes
+
+- Text assets (JS/CSS) appear strongly compressed overall, but remain large in absolute bytes.
+- Images account for a large portion of transfer and seem to rely mostly on native image format compression rather than additional content-encoding.
+- The warm run shows very limited cache benefit, suggesting constrained cache reuse for this page experience.
