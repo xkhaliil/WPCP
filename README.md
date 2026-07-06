@@ -49,7 +49,6 @@ Method: Lighthouse (mobile default + desktop preset)
 - **Cumulative Layout Shift (CLS):** 0.033
 - **Speed Index:** 22.3 s
 
-
 ## Audit Focus Pages (8)
 
 1. **https://apnews.com/**  
