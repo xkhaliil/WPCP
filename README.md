@@ -74,3 +74,8 @@ Method: Lighthouse (mobile default + desktop preset)
 
 8. **https://apnews.com/donate**  
    Conversion-oriented page where speed directly affects user completion rates. Valuable for evaluating performance impact on business/goal outcomes.
+
+## Assignment Artifacts
+
+- Baseline report: [baseline.md](baseline.md)
+- Findings report: [findings.md](findings.md)
