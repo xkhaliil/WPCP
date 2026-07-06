@@ -6,12 +6,13 @@
 - Measurement date: 2026-07-06
 - Tools:
   - Lighthouse (mobile default + desktop preset) for performance baseline
+  - Mobile runs used Lighthouse throttled mobile emulation (CPU/network throttling as applied by Lighthouse)
   - Lighthouse network-requests audits for cold vs warm networking baseline
 - Note: Lighthouse runs reported slow-load warnings, so this is a baseline snapshot and should be re-run later for trend comparison.
 
 ## Core Web Vitals and Related UX Metrics (Primary Page)
 
-### Mobile
+### Mobile (throttled Lighthouse emulation)
 
 - LCP: 54.3 s
 - CLS: 0.033
@@ -35,7 +36,7 @@
 
 ## PageSpeed Category Scores (Primary Page)
 
-### Mobile
+### Mobile (throttled Lighthouse emulation)
 
 - Performance: 25
 - Accessibility: 76

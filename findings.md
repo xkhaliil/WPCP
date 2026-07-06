@@ -132,6 +132,34 @@ This set is cleaned so each finding is independently observable and scoped to on
 - Keep doing:
   Keep cache controls for reusable assets and extend to more high-byte resources.
 
+## Mobile-Specific Findings
+
+## 11) Mobile throttling exposes severe first-load delay on the homepage
+
+- Type: Corrective
+- Observable signal: Mobile LCP 54.3 s, Mobile TTI 56.8 s, Mobile TBT 18,020 ms, Mobile Speed Index 22.3 s
+- How this affects users:
+  On slower mobile conditions, the homepage feels unusable for a long time and content arrives far too late.
+- Metric(s) affected:
+  Mobile LCP, TTI, TBT, Speed Index, Performance score
+- Most likely cause:
+  Heavy render-blocking work and large above-the-fold payload under throttled mobile conditions.
+- Likely solution:
+  Prioritize the mobile hero content, defer non-critical assets, and reduce JavaScript execution on the first viewport.
+
+## 12) Mobile network payload is too heavy for throttled conditions
+
+- Type: Corrective
+- Observable signal: Mobile cold transfer 9.55 MB, 271 requests, and only 1.08% warm-load transfer reduction
+- How this affects users:
+  Mobile users spend too long waiting and consume more data, especially on constrained connections.
+- Metric(s) affected:
+  Mobile request count, transfer size, resource size, cache efficiency, perceived repeat-load speed
+- Most likely cause:
+  Too many resources are fetched on the first mobile visit, and the page does not reuse enough bytes on repeat loads.
+- Likely solution:
+  Reduce mobile request fan-out, trim initial bytes, and improve cache reuse for stable assets.
+
 ## Priority Order (Corrective)
 
 1. Fix interactivity delays from JavaScript main-thread work (Finding 3)
@@ -139,3 +167,4 @@ This set is cleaned so each finding is independently observable and scoped to on
 3. Reduce total payload size and resource competition (Findings 7 and 4)
 4. Improve repeat-load cache byte savings (Finding 8)
 5. Stabilize ad/third-party rendering and improve accessibility compliance (Findings 5 and 6)
+6. Address mobile-specific first-load delay and payload pressure (Findings 11 and 12)
