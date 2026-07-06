@@ -1,151 +1,141 @@
 # Findings
 
-## 1) Extremely slow Largest Contentful Paint on the homepage
+This set is cleaned so each finding is independently observable and scoped to one primary problem.
 
-- **How this affects users:**
-  The main content appears very late, so users see a blank or incomplete page for too long and are more likely to abandon before reading.
-- **Affected metric(s):**
-  - LCP: 54.3 s (mobile), 17.2 s (desktop)
-  - FCP and Speed Index are also poor, reinforcing delayed visual progress.
-- **Cause (most likely):**
-  Heavy above-the-fold payload and delayed critical rendering (large media, script activity, and non-critical assets competing with main content).
-- **Likely solution:**
-  Prioritize hero content and critical resources:
-  - Preload/prioritize the LCP image or headline block.
-  - Delay non-critical scripts and below-the-fold media.
-  - Reduce render-blocking CSS/JS and inline only minimal critical CSS.
+## Corrective Findings
 
-## 2) Severe main-thread blocking delays interactivity
+## 1) Initial page render is significantly delayed
 
-- **How this affects users:**
-  The page may look partially loaded but feels unresponsive (scroll, tap, open menu), creating frustration and perceived slowness.
-- **Affected metric(s):**
-  - TBT: 18,020 ms (mobile), 4,530 ms (desktop)
-  - TTI: 56.8 s (mobile), 21.0 s (desktop)
-  - Max Potential FID: 8,460 ms (mobile), 1,530 ms (desktop)
-- **Cause (most likely):**
-  Excessive JavaScript execution and long tasks on the main thread, likely from third-party and non-critical scripts loaded too early.
-- **Likely solution:**
-  Reduce and defer JavaScript work:
-  - Remove or delay non-essential third-party tags.
-  - Split bundles and lazy-load non-critical code paths.
-  - Break long tasks into smaller chunks and move work off main thread where possible.
+- Type: Corrective
+- Observable signal: FCP 9.1 s (mobile), 3.4 s (desktop); Speed Index 22.3 s (mobile), 15.7 s (desktop)
+- How this affects users:
+  Users wait too long before meaningful content appears, which increases bounce risk.
+- Metric(s) affected:
+  FCP, Speed Index, overall Performance score
+- Most likely cause:
+  Heavy critical path and blocking resources before first paint.
+- Likely solution:
+  Reduce render-blocking work, inline minimal critical CSS, and defer non-critical scripts/styles.
 
-## 3) Excess unused JavaScript increases download and execution cost
+## 2) Initial visual load (main content) is significantly delayed
 
-- **How this affects users:**
-  Users download and parse code they do not need immediately, which slows startup and increases data usage.
-- **Affected metric(s):**
-  - Lighthouse opportunity: unused JavaScript savings of ~11,660 ms (mobile), ~2,060 ms (desktop)
-  - Impacts TBT, TTI, and LCP.
-- **Cause (most likely):**
-  Over-bundled scripts and broad third-party libraries loaded on initial page view regardless of user path.
-- **Likely solution:**
-  Ship less code on first load:
-  - Code split by route/component.
-  - Use dynamic import for non-critical features.
-  - Audit third-party scripts and remove low-value tags.
+- Type: Corrective
+- Observable signal: LCP 54.3 s (mobile), 17.2 s (desktop)
+- How this affects users:
+  The page appears incomplete for too long; users may leave before seeing the main story.
+- Metric(s) affected:
+  LCP, Speed Index, Performance score
+- Most likely cause:
+  LCP element not prioritized enough and above-the-fold competition from non-critical assets.
+- Likely solution:
+  Prioritize LCP candidate (preload/fetch priority), reduce above-the-fold asset contention, and optimize hero media.
 
-## 4) Poor visual progress creates a slow perceived experience
+## 3) Initial page functionality is significantly delayed
 
-- **How this affects users:**
-  Even if the server responds quickly, content fills in too slowly, so the site feels broken or unstable during load.
-- **Affected metric(s):**
-  - Speed Index: 22.3 s (mobile), 15.7 s (desktop)
-  - FCP: 9.1 s (mobile), 3.4 s (desktop)
-- **Cause (most likely):**
-  Too much blocking work before meaningful paint (render path not optimized for above-the-fold text/image delivery).
-- **Likely solution:**
-  Improve critical rendering path:
-  - Preconnect to key origins and preload critical assets.
-  - Defer non-critical CSS/JS.
-  - Reduce above-the-fold complexity and media weight.
+- Type: Corrective
+- Observable signal: TTI 56.8 s (mobile), 21.0 s (desktop); TBT 18,020 ms (mobile), 4,530 ms (desktop)
+- How this affects users:
+  Page appears loaded but interaction is delayed or janky (scroll/tap/menu responsiveness).
+- Metric(s) affected:
+  TBT, TTI, Max Potential FID, Performance score
+- Most likely cause:
+  Too much JavaScript main-thread work, including third-party execution.
+- Likely solution:
+  Reduce third-party JS, split bundles, lazy-load non-critical features, and break long tasks.
 
-## 5) Best Practices score indicates reliability/quality issues under load
+## 4) Image loading order does not consistently match user need
 
-- **How this affects users:**
-  Runtime errors and weaker implementation quality can lead to broken features, inconsistent behavior, and trust loss.
-- **Affected metric(s):**
-  - Best Practices: 54 (mobile and desktop)
-  - Related diagnostics include browser console errors during the run.
-- **Cause (most likely):**
-  Script/runtime issues and integration quality gaps (including third-party dependencies and failed resource calls).
-- **Likely solution:**
-  Raise implementation quality and stability:
-  - Fix console errors and failed requests.
-  - Validate third-party scripts and remove unstable dependencies.
-  - Add monitoring for JS errors and regressions in CI.
+- Type: Corrective
+- Observable signal: 67 image requests and 3.46 MB image transfer on cold load; poor LCP/Speed Index together indicate image priority issues
+- How this affects users:
+  High-value visual content can be delayed while lower-priority imagery also competes for bandwidth.
+- Metric(s) affected:
+  LCP, Speed Index, image transfer budget
+- Most likely cause:
+  Weak image prioritization and large media volume loading too early.
+- Likely solution:
+  Prioritize hero/first-story images, lazy-load below-the-fold images, and enforce responsive image sizing.
 
-## Priority Summary
+## 5) Delayed ad and third-party slots hurt perceived stability
 
-Based on severity and user impact, the initial remediation order should be:
+- Type: Corrective
+- Observable signal: very high third-party script/network activity during early render; low Best Practices score (54)
+- How this affects users:
+  Layout feels unstable or "still loading" for too long, reducing trust and readability.
+- Metric(s) affected:
+  LCP, TBT, Speed Index, Best Practices
+- Most likely cause:
+  Ad/third-party scripts injected too early in the critical rendering path.
+- Likely solution:
+  Move non-critical ad work later, reserve stable placeholders, and gate third-party script execution.
 
-1. Reduce JavaScript main-thread work (TBT/TTI)
-2. Improve LCP on mobile and desktop
-3. Remove unused JS/CSS from initial load
-4. Improve critical rendering path for FCP/Speed Index
-5. Resolve best-practice/runtime reliability issues
+## 6) Accessibility baseline indicates semantic/control gaps
 
-## Additional Networking Findings
+- Type: Corrective
+- Observable signal: Accessibility score 76 (mobile), 79 (desktop)
+- How this affects users:
+  Assistive technology users may struggle with controls, labels, or page structure clarity.
+- Metric(s) affected:
+  Accessibility score
+- Most likely cause:
+  Missing accessible names/labels and structural semantics inconsistencies.
+- Likely solution:
+  Audit interactive controls and headings, ensure accessible names/labels/alt text, and validate with accessibility tooling.
 
-## 6) Request count is very high on the primary page
+## 7) Homepage payload size is too large
 
-- **How this affects users:**
-  More requests increase connection overhead and make page load more sensitive to unstable networks, which slows down first load and increases failure risk.
-- **Affected metric(s):**
-  - Network requests: 271 on cold load
-  - Related impact on FCP, LCP, and Speed Index due to request waterfall pressure
-- **Cause (most likely):**
-  Many separate resources across first-party content blocks, media assets, and third-party scripts.
-- **Likely solution:**
-  Reduce request fan-out:
-  - Remove unnecessary third-party calls.
-  - Consolidate and defer non-critical requests.
-  - Use lazy loading for below-the-fold assets.
+- Type: Corrective (Additional)
+- Observable signal: 9.55 MB transferred, 25.96 MB total resource size on cold load
+- How this affects users:
+  Users on mobile networks face slower loads and higher data usage costs.
+- Metric(s) affected:
+  Transfer size, resource size, FCP/LCP/Speed Index, Performance
+- Most likely cause:
+  Heavy combined JS/CSS/media footprint on initial navigation.
+- Likely solution:
+  Set page-weight budgets, remove unused code/media, and stage non-critical downloads after first render.
 
-## 7) Transfer and total resource size are excessively large
+## 8) Warm-load cache benefit is weak in transferred bytes
 
-- **How this affects users:**
-  Large payloads increase waiting time, especially on mobile data, and raise data usage costs for users.
-- **Affected metric(s):**
-  - Cold transfer size: 9.55 MB
-  - Total resource size: 25.96 MB
-  - Compression reduction: 63.22% (good compression but still very large payload)
-- **Cause (most likely):**
-  Heavy front page composition with large script/CSS bundles and substantial media volume.
-- **Likely solution:**
-  Shrink bytes shipped on initial load:
-  - Aggressively trim unused JS/CSS.
-  - Delay non-essential modules and media.
-  - Optimize image delivery and responsive sizing.
+- Type: Corrective (Additional)
+- Observable signal: only 1.08% transfer reduction from cold to warm run (9.55 MB to 9.45 MB)
+- How this affects users:
+  Repeat visits and soft refreshes remain expensive instead of feeling noticeably faster.
+- Metric(s) affected:
+  Warm transfer size, cache efficiency, perceived repeat-load speed
+- Most likely cause:
+  Limited reusable cache footprint for high-byte resources and/or aggressive cache-busting dynamics.
+- Likely solution:
+  Improve cacheability of stable assets (immutable hashed files, stronger TTL policy) and reduce dynamic high-byte responses.
 
-## 8) Soft refresh shows weak cache benefit
+## Good Findings
 
-- **How this affects users:**
-  Repeat visits and in-session refreshes stay expensive, so users do not get the expected faster second load.
-- **Affected metric(s):**
-  - Warm transfer size: 9.45 MB
-  - Transfer reduction vs cold: only 1.08%
-  - Cached requests observed: 3
-- **Cause (most likely):**
-  Cache policies and request patterns that limit effective reuse (short TTL/no-store/private responses or frequently changing URLs/params).
-- **Likely solution:**
-  Improve cacheability:
-  - Increase TTL for stable static assets.
-  - Use immutable hashed assets for JS/CSS/media.
-  - Minimize cache-busting patterns for unchanged resources.
+## 9) Compression on text assets is strong
 
-## 9) JS/CSS and image payload mix is still too heavy
+- Type: Good
+- Observable signal: overall cold compression reduction 63.22%; JS/CSS compression reduction 72.60%
+- Why this is good for users:
+  Smaller transfer for text resources improves bandwidth efficiency and helps loading speed.
+- Metric(s) supported:
+  Transfer size efficiency, network performance baseline
+- Keep doing:
+  Maintain Brotli/gzip delivery and continue compression checks in CI/performance audits.
 
-- **How this affects users:**
-  Users pay large download and processing costs from both code and media, which delays rendering and interactivity.
-- **Affected metric(s):**
-  - JS/CSS transfer: 4.57 MB (47.88% of total), 72.60% compressed
-  - Images transfer: 3.46 MB (36.19% of total), effectively no extra content-encoding compression
-- **Cause (most likely):**
-  Overweight script/style payload plus high image byte volume on the homepage.
-- **Likely solution:**
-  Rebalance code and media budgets:
-  - Enforce JS/CSS size budgets and split critical vs non-critical code.
-  - Use responsive images with stricter byte targets per viewport.
-  - Defer non-critical images and improve priority hints for key visuals.
+## 10) Some caching and request reuse behavior is present
+
+- Type: Good
+- Observable signal: request count drops from 271 (cold) to 242 (warm); warm run reports cached requests
+- Why this is good for users:
+  Repeat loads avoid part of the request overhead.
+- Metric(s) supported:
+  Warm request volume and cache-hit behavior
+- Keep doing:
+  Keep cache controls for reusable assets and extend to more high-byte resources.
+
+## Priority Order (Corrective)
+
+1. Fix interactivity delays from JavaScript main-thread work (Finding 3)
+2. Fix LCP and initial visual priority (Finding 2)
+3. Reduce total payload size and resource competition (Findings 7 and 4)
+4. Improve repeat-load cache byte savings (Finding 8)
+5. Stabilize ad/third-party rendering and improve accessibility compliance (Findings 5 and 6)
