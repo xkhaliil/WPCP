@@ -255,18 +255,67 @@ The highest possible score is 20. Higher scores mean higher priority.
 - Likely solution:
   Set DIMS resize parameters to match actual rendered dimensions per breakpoint. Use `srcset` and `sizes` attributes on `<img>` elements to let the browser select the correct variant. Switch the preferred format to AVIF (add `format/avif` as the DIMS format parameter with WebP as a fallback) for additional 20–50% size reduction over WebP.
 
+## Coverage and Runtime Findings
+
+## 17) No critical CSS is extracted; the full stylesheet blocks first render
+
+- Type: Corrective (Coverage)
+- Ratings: Impact 4, Mobile Severity 4, Breadth 4, Effort 3
+- Priority Heat Score: 15/20
+- Observable signal: `All.min.[hash].gz.css` (107 KB) is loaded synchronously in `<head>` with no inline critical CSS, no `rel="preload"` + `onload` pattern, and no `media` attribute; it is the single largest render-blocking resource with a 1,882 ms blocking penalty (desktop); 87.5% of its rules (93.6 KB) are unused on the homepage
+- How this affects users:
+  The browser cannot display any visible content — not even a background color or headline — until the full 107 KB stylesheet finishes downloading and parsing. On mobile or slower connections this delay is even longer. Users see a blank or near-blank page during the entire stylesheet download window.
+- Metric(s) affected:
+  FCP, LCP, Speed Index, render-blocking budget
+- Most likely cause:
+  No critical-CSS extraction step exists in the build pipeline. The full monolithic stylesheet is served unconditionally on every route. Inline `<style>` is not used for above-the-fold rules.
+- Likely solution:
+  Add a critical-CSS extraction step (e.g., Critters in the build pipeline or equivalent server-side tooling) to inline only the above-the-fold rules in `<head>`. Load the remaining stylesheet asynchronously using `rel="preload" as="style" onload="this.rel='stylesheet'"` so it no longer blocks paint. This alone could recover most of the 1,882 ms render-blocking penalty.
+
+## 18) Excessive long tasks and forced reflows cause dropped frames throughout page load
+
+- Type: Corrective (Flame Chart / Runtime)
+- Ratings: Impact 5, Mobile Severity 5, Breadth 5, Effort 2
+- Priority Heat Score: 17/20
+- Observable signal: 20 long tasks totaling 5,846 ms on desktop (19,006 ms on mobile); Style & Layout main-thread category: 7,871 ms (desktop); forced-reflow-insight audit flagged (score: 0); JW Player library alone triggers a single 517 ms forced synchronous reflow; AP News own bundle triggers two forced reflows totaling ~267 ms; multiple third-party ad and video scripts trigger reflows of 40–153 ms each
+- How this affects users:
+  During the 20+ second load window, the main thread is blocked roughly 26% of the time on desktop. Any user who scrolls, taps, or tries to interact during load encounters frozen or janky frames. On mobile with 19 seconds of blocked main thread, the page is essentially non-interactive for the majority of its loading period. Individual 1,500 ms tasks from the video ad script would drop ~90 consecutive frames at 60fps.
+- Metric(s) affected:
+  TBT, TTI, Max Potential FID, scroll and interaction responsiveness
+- Most likely cause:
+  Third-party ad/video scripts (primis.tech video player, JW Player, DoubleClick pubads, Nativo, Confiant) are loaded synchronously early in the load and execute large tasks on the main thread. Several of these scripts also trigger forced synchronous layout by reading DOM geometry properties immediately after mutating the DOM, causing the browser to interrupt other work to recalculate layout. The AP News first-party bundle also contains layout-thrashing patterns (two forced reflows of ~144 ms each).
+- Likely solution:
+  Eliminate forced synchronous layout in first-party code by batching DOM reads before DOM writes (never read layout properties between a write and the next frame). Defer or facade all third-party ad/video scripts so they do not execute on the main thread during page load — load them after `DOMContentLoaded` or on first user interaction. For JW Player specifically, avoid calling layout-triggering APIs synchronously during initialization.
+
+## 19) Custom fonts ship without `font-display`, causing invisible text and visible font swap
+
+- Type: Corrective (Layers / Animation)
+- Ratings: Impact 3, Mobile Severity 3, Breadth 4, Effort 4
+- Priority Heat Score: 14/20
+- Observable signal: 8 AP custom web fonts (APW05 family) loaded from `assets.apnews.com` with no `font-display` CSS descriptor; Lighthouse flags 980 ms of FOIT (invisible text) for the worst font (APW05-Condensed); total wasted font-swap time across all 8 fonts exceeds 4,500 ms cumulatively; the font-swap from fallback to custom typeface is visible as a flash/re-render that users perceive as animation jank on first load
+- How this affects users:
+  Readers either see no text at all (FOIT) or see it swap abruptly from a system font to the custom AP font (FOUT) during the first 1–3 seconds of load. This creates a jarring visual experience especially for the headline area, which is the most read-critical part of a news page.
+- Metric(s) affected:
+  Perceived first-frame stability, visual jank, FCP (FOIT delays any text paint), CLS (if fallback and custom font differ in size, causing layout shift on swap)
+- Most likely cause:
+  The `@font-face` declarations in `All.min.css` do not include a `font-display` property. The browser default is `auto`, which most modern browsers treat as `block` — holding text invisible until the custom font loads (FOIT) or timing out and showing fallback text.
+- Likely solution:
+  Add `font-display: swap` (or `font-display: optional` for non-essential secondary fonts) to all `@font-face` declarations. Preload the most critical font variants (the headline font weight used above the fold) with `<link rel="preload" as="font" crossorigin>` so they arrive before first paint. Adjust fallback font metrics (`size-adjust`, `ascent-override`, etc.) to reduce the visual jump on swap.
+
 ## Priority Order (Corrective)
 
-1. Fix interactivity delays from JavaScript main-thread work, including third-party script deferral (Findings 3 and 15)
+1. Fix interactivity delays: eliminate long tasks and forced reflows (Findings 3, 15, and 18)
 2. Fix LCP and initial visual priority (Finding 2)
-3. Reduce total payload size and resource competition, including monolithic JS/CSS bundles (Findings 7, 4, 13, and 14)
-4. Improve repeat-load cache byte savings (Finding 8)
-5. Fix oversized image delivery and adopt AVIF (Finding 16)
-6. Stabilize ad/third-party rendering and improve accessibility compliance (Findings 5 and 6)
-7. Address mobile-specific first-load delay and payload pressure (Findings 11 and 12)
+3. Extract critical CSS to unblock first render (Finding 17)
+4. Reduce total payload size and resource competition, including monolithic JS/CSS bundles (Findings 7, 4, 13, and 14)
+5. Improve repeat-load cache byte savings (Finding 8)
+6. Fix oversized image delivery and adopt AVIF (Finding 16)
+7. Fix font display strategy to eliminate FOIT/FOUT jank (Finding 19)
+8. Stabilize ad/third-party rendering and improve accessibility compliance (Findings 5 and 6)
+9. Address mobile-specific first-load delay and payload pressure (Findings 11 and 12)
 
 ## Final Score
 
-- Corrective findings scored with PHS-4: 16, 17, 17, 14, 14, 12, 17, 15, 17, 17, 15, 14, 17, 14
+- Corrective findings scored with PHS-4: 16, 17, 17, 14, 14, 12, 17, 15, 17, 17, 15, 14, 17, 14, 15, 17, 14
 - Average corrective score: 15.4/20
 - Final score as a percentage: 77/100
