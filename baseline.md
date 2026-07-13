@@ -229,12 +229,12 @@ No critical-CSS extraction tooling (e.g., Critters, Penthouse, or equivalent) ap
 
 ### Unused CSS
 
-| Source | Transfer (KB) | Wasted (KB) | Wasted % |
-|---|---|---|---|
-| `assets.apnews.com/.../All.min.gz.css` (first-party main bundle) | 107 | 93.6 | 87.5% |
-| OneTrust banner inline CSS (injected by `otBannerSdk.js`) | 22 | 18.9 | 85.9% |
-| `cdn.viafoura.net/181...css` (community widget) | 13.1 | 12.8 | 97.8% |
-| JW Player inline CSS (injected by player scripts) | 12.4 | 10.7 | 86.2% |
+| Source                                                           | Transfer (KB) | Wasted (KB) | Wasted % |
+| ---------------------------------------------------------------- | ------------- | ----------- | -------- |
+| `assets.apnews.com/.../All.min.gz.css` (first-party main bundle) | 107           | 93.6        | 87.5%    |
+| OneTrust banner inline CSS (injected by `otBannerSdk.js`)        | 22            | 18.9        | 85.9%    |
+| `cdn.viafoura.net/181...css` (community widget)                  | 13.1          | 12.8        | 97.8%    |
+| JW Player inline CSS (injected by player scripts)                | 12.4          | 10.7        | 86.2%    |
 
 - Desktop estimated savings from unused CSS: **133 KB**
 - The primary cause for all entries is the same: each stylesheet is a single all-pages bundle shipped on a route that only needs a small subset of its rules.
@@ -242,19 +242,20 @@ No critical-CSS extraction tooling (e.g., Critters, Penthouse, or equivalent) ap
 ### Unused JavaScript
 
 **First-party:**
+
 - `All.min.[hash].gz.js` (AP News own bundle): 441.8 KB resource size, **346.8 KB (78.5%) unused** at homepage load
 - `apcdp.apnews.com/script.js` (AP CDP/analytics): 141.2 KB, ~35.4% unused
 - `apcdp.apnews.com/plugin/library/...` and `apcdp.apnews.com/plugin/plugin/...`: combined ~56–65% unused
 
 **Third-party by category:**
 
-| Category | Estimated Wasted (KB, desktop) | Top offenders |
-|---|---|---|
-| Ad / Video scripts | ~1,591 | primis HLS.js (91% unused), primis liveVideo (58%), primis prebid (66%), s.ntv.io (78–82%), pubads (69%) |
-| Other 3P (GTM, Viafoura, apcdp, html-load.cc) | ~816 | html-load.cc (66%), Viafoura (50%), GTM (40%), apcdp (35–72%) |
-| Marketing / Analytics | ~203 | BounceExchange smart-tag (75%), OneSignal (69%), Kameleoon (44%) |
-| Social | ~54 | Facebook SDK (69%) |
-| reCAPTCHA | ~251 | Google reCAPTCHA (67%) — loaded but mostly unused on homepage |
+| Category                                      | Estimated Wasted (KB, desktop) | Top offenders                                                                                            |
+| --------------------------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| Ad / Video scripts                            | ~1,591                         | primis HLS.js (91% unused), primis liveVideo (58%), primis prebid (66%), s.ntv.io (78–82%), pubads (69%) |
+| Other 3P (GTM, Viafoura, apcdp, html-load.cc) | ~816                           | html-load.cc (66%), Viafoura (50%), GTM (40%), apcdp (35–72%)                                            |
+| Marketing / Analytics                         | ~203                           | BounceExchange smart-tag (75%), OneSignal (69%), Kameleoon (44%)                                         |
+| Social                                        | ~54                            | Facebook SDK (69%)                                                                                       |
+| reCAPTCHA                                     | ~251                           | Google reCAPTCHA (67%) — loaded but mostly unused on homepage                                            |
 
 - **Desktop total unused JS savings: ~3,318 KB** (Lighthouse estimate)
 - **Mobile total unused JS savings: ~2,423 KB** (Lighthouse estimate)
@@ -266,16 +267,16 @@ Source: Lighthouse long-tasks, mainthread-work-breakdown, and forced-reflow-insi
 
 ### Main-Thread Work Summary
 
-| Category | Desktop (ms) | Mobile (ms) |
-|---|---|---|
-| Script Evaluation | 12,292 | 31,492 |
-| Style & Layout | 7,871 | 4,550 |
-| Other | 5,325 | 11,023 |
-| Script Parse & Compile | 978 | 3,512 |
-| Rendering (paint/composite) | 773 | 2,152 |
-| Parse HTML & CSS | 234 | 1,045 |
-| Garbage Collection | 123 | 518 |
-| **Total** | **~27,596** | **~54,292** |
+| Category                    | Desktop (ms) | Mobile (ms) |
+| --------------------------- | ------------ | ----------- |
+| Script Evaluation           | 12,292       | 31,492      |
+| Style & Layout              | 7,871        | 4,550       |
+| Other                       | 5,325        | 11,023      |
+| Script Parse & Compile      | 978          | 3,512       |
+| Rendering (paint/composite) | 773          | 2,152       |
+| Parse HTML & CSS            | 234          | 1,045       |
+| Garbage Collection          | 123          | 518         |
+| **Total**                   | **~27,596**  | **~54,292** |
 
 ### Long Tasks (Dropped / Skipped Frames)
 
@@ -283,18 +284,18 @@ A "long task" is any main-thread task exceeding 50 ms. Each long task blocks the
 
 **Desktop: 20 long tasks, 5,846 ms total blocked time**
 
-| Script | Duration (ms) | Start Time (ms into load) |
-|---|---|---|
-| primis.tech liveVideo.php (video ad) | 1,532 | 18,154 |
-| `assets.apnews.com/.../All.min.gz.js` (AP News bundle) | 405 | 7,712 |
-| Unattributable | 367 | 16,578 |
-| `ssl.p.jwpcdn.com/.../provider.hlsjs.js` (JW Player HLS) | 356 | 20,504 |
-| `cdn.confiant-integrations.net/.../wrap.js` (ad quality) | 302 | 10,779 |
-| `securepubads.g.doubleclick.net/.../pubads_impl.js` | 287 | 16,196 |
-| `s.ntv.io/serve/load.js` (Nativo) | 256 | 7,226 |
-| `s.ntv.io/serve/load.js` (Nativo, second task) | 230 | 11,224 |
-| `www.googletagmanager.com/gtm.js` | 227 | 8,147 |
-| `cdn.viafoura.net/vf-v2.js` | 225 | 16,996 |
+| Script                                                   | Duration (ms) | Start Time (ms into load) |
+| -------------------------------------------------------- | ------------- | ------------------------- |
+| primis.tech liveVideo.php (video ad)                     | 1,532         | 18,154                    |
+| `assets.apnews.com/.../All.min.gz.js` (AP News bundle)   | 405           | 7,712                     |
+| Unattributable                                           | 367           | 16,578                    |
+| `ssl.p.jwpcdn.com/.../provider.hlsjs.js` (JW Player HLS) | 356           | 20,504                    |
+| `cdn.confiant-integrations.net/.../wrap.js` (ad quality) | 302           | 10,779                    |
+| `securepubads.g.doubleclick.net/.../pubads_impl.js`      | 287           | 16,196                    |
+| `s.ntv.io/serve/load.js` (Nativo)                        | 256           | 7,226                     |
+| `s.ntv.io/serve/load.js` (Nativo, second task)           | 230           | 11,224                    |
+| `www.googletagmanager.com/gtm.js`                        | 227           | 8,147                     |
+| `cdn.viafoura.net/vf-v2.js`                              | 225           | 16,996                    |
 
 **Mobile: 20 long tasks, 19,006 ms total blocked time (~3.25× worse than desktop)**
 
@@ -315,17 +316,17 @@ The `forced-reflow-insight` audit is flagged. Multiple scripts call DOM geometry
 
 Top forced-reflow offenders (by individual reflow time):
 
-| Script | Reflow (ms) |
-|---|---|
-| `cdn.jwplayer.com/libraries/8z1I5w4s.js` | 517.7 |
-| `apcdp.apnews.com/plugin/library/...` | 153.1 |
-| `securepubads.g.doubleclick.net/pubads_impl.js` | 152.2 |
-| `imasdk.googleapis.com/js/sdkloader/ima3.js` | 143.0 + 100.5 |
-| `cdn.cookielaw.org/.../otBannerSdk.js` (OneTrust) | 142.7 + 82.5 |
+| Script                                                 | Reflow (ms)   |
+| ------------------------------------------------------ | ------------- |
+| `cdn.jwplayer.com/libraries/8z1I5w4s.js`               | 517.7         |
+| `apcdp.apnews.com/plugin/library/...`                  | 153.1         |
+| `securepubads.g.doubleclick.net/pubads_impl.js`        | 152.2         |
+| `imasdk.googleapis.com/js/sdkloader/ima3.js`           | 143.0 + 100.5 |
+| `cdn.cookielaw.org/.../otBannerSdk.js` (OneTrust)      | 142.7 + 82.5  |
 | `assets.apnews.com/.../All.min.gz.js` (AP News bundle) | 143.9 + 123.3 |
-| `apcdp.apnews.com/plugin/library/...` | 89.5 |
-| `cdn.viafoura.net/vf-v2.js` | 79.5 |
-| `ssl.p.jwpcdn.com/.../jwplayer.core.controls.js` | 77.8 |
+| `apcdp.apnews.com/plugin/library/...`                  | 89.5          |
+| `cdn.viafoura.net/vf-v2.js`                            | 79.5          |
+| `ssl.p.jwpcdn.com/.../jwplayer.core.controls.js`       | 77.8          |
 
 The JW Player library alone triggers a single 517 ms forced reflow — a frame-budget violation of ~30 frames. The AP News first-party bundle also triggers two separate forced reflows totaling ~267 ms, indicating layout-thrashing patterns in its own JS.
 
