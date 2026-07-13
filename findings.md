@@ -193,17 +193,80 @@ The highest possible score is 20. Higher scores mean higher priority.
 - Likely solution:
   Reduce mobile request fan-out, trim initial bytes, and improve cache reuse for stable assets.
 
+## Bundle Findings
+
+## 13) First-party JavaScript is a monolithic bundle with 78.5% unused bytes at homepage load
+
+- Type: Corrective (Bundle)
+- Ratings: Impact 4, Mobile Severity 4, Breadth 4, Effort 3
+- Priority Heat Score: 15/20
+- Observable signal: `All.min.[hash].gz.js` is 441.8 KB resource size with 346.8 KB (78.5%) unused at page load; no route splitting or code splitting detected; desktop est. 3,318 KB total unused JS savings; mobile est. 2,423 KB
+- How this affects users:
+  The browser parses and compiles a large JS bundle upfront that contains code for article pages, galleries, and other templates never used on the homepage, consuming main-thread time before the page is interactive.
+- Metric(s) affected:
+  TBT, TTI, Max Potential FID, Performance score
+- Most likely cause:
+  A single monolithic Webpack (or equivalent) bundle is produced for all pages and served unconditionally, with no route-based or component-based code splitting.
+- Likely solution:
+  Implement route splitting so the homepage only loads homepage-required code. Move article, gallery, quiz, and search-page code into separate chunks loaded on demand.
+
+## 14) Main CSS bundle is monolithic, 87.5% unused, and render-blocking
+
+- Type: Corrective (Bundle)
+- Ratings: Impact 4, Mobile Severity 4, Breadth 3, Effort 3
+- Priority Heat Score: 14/20
+- Observable signal: `All.min.[hash].gz.css` transfers 107 KB with 93.6 KB (87.5%) wasted; it is loaded synchronously in `<head>` and contributes a 1,882 ms render-blocking penalty (desktop); Viafoura CSS 97.8% unused, OneTrust inline CSS 85.9% unused
+- How this affects users:
+  The browser is blocked from rendering anything visible until a stylesheet mostly full of irrelevant rules has fully downloaded and parsed, directly delaying FCP and LCP.
+- Metric(s) affected:
+  FCP, LCP, Speed Index, render-blocking budget
+- Most likely cause:
+  A single catch-all stylesheet is produced for all page templates and served synchronously in every page's `<head>`, with no critical-CSS extraction or route-based CSS splitting.
+- Likely solution:
+  Extract the critical above-the-fold CSS and inline it in `<head>`; load the remainder asynchronously with `rel="preload"` + `onload` or a media-query trick. Split route-specific styles into separate files loaded only on relevant pages.
+
+## 15) Third-party scripts are loaded upfront with no deferral and dominate main-thread time
+
+- Type: Corrective (Bundle / Third-party)
+- Ratings: Impact 5, Mobile Severity 5, Breadth 5, Effort 2
+- Priority Heat Score: 17/20
+- Observable signal: 40 distinct third-party origins loaded on first visit; Wunderkind 3,181 ms main thread, primis.tech 2,181 ms + 3,202 KB transfer (91% of HLS.js unused), confiant 561 ms, Quantcast 557 ms, GTM 475 ms; total identified third-party main-thread time ≈ 9,900 ms; OneTrust OtAutoBlock.js and Kameleoon engine.js are render-blocking; `html-load.cc` is an unrecognized domain executing 110 ms on main thread
+- How this affects users:
+  Nearly all third-party advertising, analytics, A/B testing, video, and marketing scripts compete for the main thread from the moment the page starts loading, preventing the browser from processing the actual page content and making the page non-interactive for an extended period.
+- Metric(s) affected:
+  TBT, TTI, FCP, LCP, Max Potential FID, Best Practices score
+- Most likely cause:
+  Scripts are injected via synchronous `<script>` tags or Google Tag Manager triggers that fire immediately on page load with no `async`/`defer` discipline and no facade or intersection-observer gating for heavy widgets.
+- Likely solution:
+  Audit and categorize all third-party scripts by necessity and timing. Defer non-critical scripts (Wunderkind, primis.tech video ads, dianomi, Facebook SDK) until after first user interaction or `requestIdleCallback`. Use facades for the video ad player and comments widget. Remove or investigate `html-load.cc` — it is an unrecognized domain and should not be executing code on the page.
+
+## 16) Images are served oversized for their display context despite using a capable CDN
+
+- Type: Corrective (Bundle / Image Delivery)
+- Ratings: Impact 4, Mobile Severity 4, Breadth 3, Effort 3
+- Priority Heat Score: 14/20
+- Observable signal: Lighthouse image-delivery-insight flags 12 images with 1,763 KB total savings (desktop); DIMS images served at 1,440×960 or 1,440×1,080 when displayed at smaller sizes; quality/90 used throughout; no AVIF format detected on any image
+- How this affects users:
+  Browsers download significantly more image data than is ever displayed, increasing total transfer size and delaying LCP for the hero image.
+- Metric(s) affected:
+  LCP, image transfer budget, total page weight
+- Most likely cause:
+  The DIMS CDN supports parameterized resizing but the resize dimensions in generated URLs are not consistently matched to the actual CSS display dimensions. A single large size is used across multiple breakpoints instead of responsive `srcset` with per-breakpoint dimensions.
+- Likely solution:
+  Set DIMS resize parameters to match actual rendered dimensions per breakpoint. Use `srcset` and `sizes` attributes on `<img>` elements to let the browser select the correct variant. Switch the preferred format to AVIF (add `format/avif` as the DIMS format parameter with WebP as a fallback) for additional 20–50% size reduction over WebP.
+
 ## Priority Order (Corrective)
 
-1. Fix interactivity delays from JavaScript main-thread work (Finding 3)
+1. Fix interactivity delays from JavaScript main-thread work, including third-party script deferral (Findings 3 and 15)
 2. Fix LCP and initial visual priority (Finding 2)
-3. Reduce total payload size and resource competition (Findings 7 and 4)
+3. Reduce total payload size and resource competition, including monolithic JS/CSS bundles (Findings 7, 4, 13, and 14)
 4. Improve repeat-load cache byte savings (Finding 8)
-5. Stabilize ad/third-party rendering and improve accessibility compliance (Findings 5 and 6)
-6. Address mobile-specific first-load delay and payload pressure (Findings 11 and 12)
+5. Fix oversized image delivery and adopt AVIF (Finding 16)
+6. Stabilize ad/third-party rendering and improve accessibility compliance (Findings 5 and 6)
+7. Address mobile-specific first-load delay and payload pressure (Findings 11 and 12)
 
 ## Final Score
 
-- Corrective findings scored with PHS-4: 16, 17, 17, 14, 14, 12, 17, 15, 17, 17
-- Average corrective score: 15.6/20
-- Final score as a percentage: 78/100
+- Corrective findings scored with PHS-4: 16, 17, 17, 14, 14, 12, 17, 15, 17, 17, 15, 14, 17, 14
+- Average corrective score: 15.4/20
+- Final score as a percentage: 77/100
