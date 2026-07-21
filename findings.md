@@ -161,6 +161,44 @@ The highest possible score is 20. Higher scores mean higher priority.
 - Keep doing:
   Keep cache controls for reusable assets and extend to more high-byte resources.
 
+## Rendering Strategy Findings
+
+## R1) SSR advantage is cancelled by render-blocking critical path (no critical CSS extraction)
+
+- Type: Corrective
+- Ratings: Impact 5, Mobile Severity 5, Breadth 5, Effort 3
+- Priority Heat Score: 18/20
+- Observable signal: TTFB 40 ms; FCP 9.1 s (mobile), 3.4 s (desktop); render-blocking CSS penalty 1,882 ms; render-blocking JS penalty 2,296 ms (desktop)
+- Rendering strategy affected: SSR (all pages)
+- How this affects users:
+  AP News uses SSR and sends a fully-populated HTML document within 40 ms. However, the browser cannot render a single pixel of that content for several more seconds because the monolithic stylesheet (`All.min.gz.css`, 107 KB, 87.5% unused on the homepage) and several synchronous scripts are loaded in `<head>` and block the render pipeline. The SSR speed advantage is entirely negated before first paint. Users experience the same blank-screen delay they would with a slow server, even though the server itself responds almost instantly.
+- Metric(s) affected:
+  FCP, LCP, Speed Index, Performance score (all pages)
+- Root cause:
+  The build pipeline ships one all-pages CSS bundle with no critical-CSS extraction step. The stylesheet is referenced synchronously in `<head>` without `media` attribute or async loading. Additionally, render-blocking analytics and consent scripts (`apcdp.apnews.com/script.js` 1,263 ms, `live.primis.tech` 436 ms, `OtAutoBlock.js` 258 ms, Parsely 339 ms) are placed before the first meaningful content.
+- Is this the expected tradeoff for this strategy?
+  No. SSR is explicitly chosen to deliver fast, crawlable HTML. Blocking the browser from painting that HTML with a 1,882 ms CSS penalty and 2,296 ms JS penalty inverts the benefit. The entire point of SSR is that content is available in the HTML; the render path should be cleared so that content can appear as early as possible.
+- Solution:
+  Extract the ~10–15 KB of above-the-fold CSS rules and inline them in `<style>` in `<head>`; load the rest of the stylesheet asynchronously (`rel="preload" as="style"` + `onload` swap). Defer or async-load non-critical `<script>` tags. This would bring FCP close to TTFB (40 ms → sub-500 ms range) instead of 3.4 s / 9.1 s.
+
+## R2) All-routes monolithic JS bundle forces full hydration cost on every page type
+
+- Type: Corrective
+- Ratings: Impact 5, Mobile Severity 5, Breadth 5, Effort 2
+- Priority Heat Score: 17/20
+- Observable signal: `All.min.[hash].gz.js` 441.8 KB resource size, 78.5% unused (346.8 KB) at homepage load; TBT 4,530 ms (desktop), 18,020 ms (mobile); AP News bundle long task 405 ms (desktop)
+- Rendering strategy affected: SSR + client-side hydration (all pages)
+- How this affects users:
+  Every page type — homepage, article, section, gallery, quiz — downloads and executes the same single JS bundle. That bundle contains code paths for all page templates simultaneously. A user reading a news article pays the JS evaluation cost for gallery sliders, quiz logic, and homepage feed renderers that are not present on the current route. This is the primary driver of TBT and TTI, making the page feel unresponsive long after it visually appears loaded. On mobile (throttled), the hydration cost triples compared to desktop and renders the page completely non-interactive for over 18 seconds.
+- Metric(s) affected:
+  TBT, TTI, Max Potential FID, Performance score (all pages); especially severe on mobile
+- Root cause:
+  The build pipeline produces a single output bundle (`All.min.gz.js`) with no route-based or component-based code splitting. There is no detectable use of dynamic `import()` for route-specific modules, and no evidence of a module federation or micro-frontend architecture that would allow per-route JS delivery.
+- Is this the expected tradeoff for this strategy?
+  No. SSR with a monolithic hydration bundle combines the disadvantages of both SSR (server processing per request) and CSR (full JS evaluation per page) without the key benefit of either. SSR with proper route splitting would allow the server to send the correct page HTML and the client to load only the code for that route's interactive features. The current approach is the worst-case hybrid.
+- Solution:
+  Introduce route-level code splitting in the build pipeline (e.g., webpack dynamic `import()` at route entry points, or migration to a framework that handles this automatically such as Next.js App Router or Astro). Target: each route's hydration bundle should be under 50–80 KB. For content-heavy pages (articles, galleries) consider partial/island hydration — only hydrate the comment section, paywall widget, and share buttons; the article text does not need JS to be read.
+
 ## Mobile-Specific Findings
 
 ## 11) Mobile throttling exposes severe first-load delay on the homepage

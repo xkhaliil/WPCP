@@ -366,6 +366,57 @@ Lighthouse detected **2 layout shifts** (desktop, CLS: 0.064):
 1. `body > div.Page-content` (score: 0.064) — the entire main content wrapper shifts after initial render. The most likely cause is the late-loading video ad slot in the hero area, which inserts a `<div>` that pushes existing content down before the ad finishes loading.
 2. `div.Page-header-right` ("Sign in / Show Search" area, score: 0.00016) — a minor shift in the header, likely caused by Zephr (paywall/subscription tool) or OneTrust injecting UI into the header after initial render.
 
+## Rendering Strategies
+
+### What rendering strategies are in use, and on which pages?
+
+AP News uses **Server-Side Rendering (SSR)** across all page types — homepage, section pages (`/entertainment`, `/hub/*`), article pages (`/article/*`), photo galleries (`/photo-gallery/*`), the search page (`/search`), and static utility pages (`/donate`).
+
+**Evidence of SSR:**
+- TTFB is 40 ms on both desktop and mobile runs. The server responds almost instantly with a fully-populated HTML document — content is not injected client-side after a blank shell arrives.
+- The HTML payload contains complete article headlines, images, and structured content without requiring JavaScript to execute first.
+- There is no detectable client-side routing framework (no React Router, Next.js, Nuxt, or similar SPA shell pattern). Each navigation triggers a full server round trip and a new HTML document.
+
+**Client-Side Hydration layer:**
+After the server-rendered HTML is received, the `All.min.[hash].gz.js` bundle (441.8 KB resource size) downloads and evaluates. This bundle re-attaches event listeners, initializes ad slots, activates the comment widget, the video player, the paywall, and other interactive features. This is a **full-page hydration** approach — every JS module in the bundle runs on every page load regardless of what the current route actually needs.
+
+**No Static Site Generation (SSG) or Incremental Static Regeneration (ISR):**
+AP News is a live news wire; content changes continuously. No evidence of pre-built static HTML (no CDN edge caching of full HTML documents, no `.html` artifacts in the response headers indicating static build output) was observed. All pages appear to be dynamically rendered per request.
+
+**Search page (`/search?q=…`):**
+The initial HTML shell is server-rendered, but the results grid itself is populated via client-side fetch after the page loads (the result list is empty in the raw HTML and filled in by JavaScript). This page is effectively **SSR shell + CSR data injection** for the results area.
+
+### How does this affect users? Are there tradeoffs?
+
+| Aspect | Effect on users |
+| --- | --- |
+| Fast TTFB (40 ms) | Browser receives HTML immediately — good for SEO crawlers and users on fast networks |
+| Full-page hydration | After HTML arrives, the browser must download, parse, compile, and execute 441 KB of JS before the page becomes interactive — this is the dominant cause of TBT 4,530 ms (desktop) and 18,020 ms (mobile) |
+| All-routes monolithic bundle | Every page type (homepage, article, gallery, quiz) loads code for all other page types. 78.5% of the JS bundle is unused on the homepage. Users pay a hydration tax for features they will never use on the current route. |
+| SSR HTML with blocking render path | SSR sends content fast, but the render-blocking CSS (1,882 ms) and JS (2,296 ms) in `<head>` mean the browser cannot paint that content until those resources are resolved. The SSR speed advantage is effectively cancelled before first paint. |
+| No SSG/ISR | Each request is server-rendered dynamically, which is appropriate for live news. The tradeoff is that caching full HTML at the CDN edge is harder, which means every user triggers a new server render rather than receiving a cached pre-built page. |
+| Search page CSR results | On slow connections or devices, the page appears to load but shows no results until the client-side fetch completes, which can feel broken or slow. |
+
+### Is this a good choice? Is it the best choice?
+
+**SSR for a news site: appropriate, but the implementation is suboptimal.**
+
+SSR is the right strategy for a news site. Articles must be indexable by search engines without JavaScript execution, content must reflect the latest state from the CMS, and the semantic HTML must be available before the JS bundle is parsed. SSR satisfies all three requirements.
+
+However, the current SSR implementation does not deliver on its primary performance promise — fast first paint — because:
+
+1. The render-blocking CSS and synchronous JS in `<head>` prevent the browser from painting the SSR HTML. A 40 ms TTFB is irrelevant if the page is then blocked for another 4,000–5,000 ms before first render.
+2. The all-routes JS hydration bundle means every page pays the full cost of a monolithic client-side app even though only a small fraction of that code is needed per route.
+
+**What would be better:**
+
+- **SSR + route-level code splitting**: split `All.min.gz.js` by route (homepage bundle, article bundle, gallery bundle, etc.). Each page only hydrates with the code it actually uses.
+- **SSR + critical CSS inlining**: extract and inline the ~10–15 KB of above-the-fold CSS rules; load the rest asynchronously. This would eliminate the 1,882 ms render-blocking CSS penalty and allow SSR HTML to paint immediately after TTFB.
+- **SSR + partial/island hydration**: for mostly-static pages like articles, only hydrate interactive islands (comment section, share buttons, paywall widget) rather than hydrating the entire page. The article text itself never needs to be re-rendered on the client.
+- **SSG/ISR for article pages that do not change**: older published articles are static. Pre-building them at CDN edge and using ISR for revalidation would eliminate the server render cost for the most-read content.
+
+---
+
 ## Baseline Summary
 
 - Rendering and interactivity are the dominant user-facing problems (very poor LCP, TTI, TBT, and Speed Index).
