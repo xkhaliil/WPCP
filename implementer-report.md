@@ -1,4 +1,5 @@
 # AP News — Performance Audit
+
 ## Implementer Report
 
 **Audit date:** July 2026  
@@ -31,6 +32,7 @@ lighthouse https://apnews.com/ \
 ```
 
 **DevTools equivalent:**
+
 1. Open Chrome. Open DevTools (`F12`).
 2. Network tab → Throttling → "Slow 4G".
 3. Performance tab → CPU throttling → 4× slowdown → click the record button → reload.
@@ -44,23 +46,23 @@ lighthouse https://apnews.com/ \
 
 Each domain investigated is listed here. Domains marked ✓ have findings below. Domains marked ○ were considered and found clean or not applicable.
 
-| Domain | Status |
-|---|---|
-| Render-blocking critical path | ✓ findings |
-| CSS delivery and unused rules | ✓ findings |
-| JavaScript bundle structure and unused code | ✓ findings |
-| Third-party script loading | ✓ findings |
-| Image delivery and prioritization | ✓ findings |
-| Font loading strategy | ✓ findings |
-| Layout shifts (CLS) | ✓ minor finding |
-| Network caching and warm-load efficiency | ✓ findings |
-| Accessibility | ✓ findings |
-| Forced synchronous layout | ✓ findings |
-| Service workers / offline support | ○ not applicable |
-| Non-composited animations | ○ clean |
-| HTTP/2 push / 103 Early Hints | ○ not detected, not flagged |
-| Web app manifest / PWA install | ○ not applicable |
-| HTTPS and protocol security | ○ clean |
+| Domain                                      | Status                      |
+| ------------------------------------------- | --------------------------- |
+| Render-blocking critical path               | ✓ findings                  |
+| CSS delivery and unused rules               | ✓ findings                  |
+| JavaScript bundle structure and unused code | ✓ findings                  |
+| Third-party script loading                  | ✓ findings                  |
+| Image delivery and prioritization           | ✓ findings                  |
+| Font loading strategy                       | ✓ findings                  |
+| Layout shifts (CLS)                         | ✓ minor finding             |
+| Network caching and warm-load efficiency    | ✓ findings                  |
+| Accessibility                               | ✓ findings                  |
+| Forced synchronous layout                   | ✓ findings                  |
+| Service workers / offline support           | ○ not applicable            |
+| Non-composited animations                   | ○ clean                     |
+| HTTP/2 push / 103 Early Hints               | ○ not detected, not flagged |
+| Web app manifest / PWA install              | ○ not applicable            |
+| HTTPS and protocol security                 | ○ clean                     |
 
 ---
 
@@ -71,7 +73,10 @@ Each domain investigated is listed here. Domains marked ✓ have findings below.
 The main stylesheet is loaded synchronously in `<head>`:
 
 ```html
-<link rel="stylesheet" href="https://assets.apnews.com/resource/.../All.min.[hash].gz.css">
+<link
+  rel="stylesheet"
+  href="https://assets.apnews.com/resource/.../All.min.[hash].gz.css"
+/>
 ```
 
 The browser cannot render any content until this file has been fully downloaded and parsed. On desktop the measured blocking penalty is **1,882 ms**. This is the single largest render blocker on the page. The file is 107 KB on the wire (after Brotli compression) and 87.5% of its rules are unused at homepage load — the browser is stalled parsing rules for article pages, galleries, and quizzes while the homepage sits blank.
@@ -94,9 +99,15 @@ Step 2 — inline the critical set:
     /* critical above-the-fold rules inlined here */
   </style>
   <!-- full stylesheet loaded async, rendered before user scrolls -->
-  <link rel="preload" href="/styles/All.min.[hash].gz.css" as="style"
-        onload="this.onload=null;this.rel='stylesheet'">
-  <noscript><link rel="stylesheet" href="/styles/All.min.[hash].gz.css"></noscript>
+  <link
+    rel="preload"
+    href="/styles/All.min.[hash].gz.css"
+    as="style"
+    onload="this.onload=null;this.rel='stylesheet'"
+  />
+  <noscript
+    ><link rel="stylesheet" href="/styles/All.min.[hash].gz.css"
+  /></noscript>
 </head>
 ```
 
@@ -116,12 +127,12 @@ Tooling options: [Critters](https://github.com/GoogleChromeLabs/critters) (webpa
 
 Four external scripts are placed in `<head>` without `defer` or `async`, before any visible content. The browser must fetch, parse, and execute each before it proceeds:
 
-| Script | Origin | Blocking cost (desktop) |
-|---|---|---|
-| `apcdp.apnews.com/script.js` | AP News CDP / analytics | 1,263 ms |
-| `live.primis.tech/live/liveView.php` | Video ad loader | 436 ms |
-| `experiments.parsely.com/vip-experiments.js` | Parsely A/B | 339 ms |
-| `cdn.cookielaw.org/.../OtAutoBlock.js` | OneTrust (GDPR auto-block) | 258 ms |
+| Script                                       | Origin                     | Blocking cost (desktop) |
+| -------------------------------------------- | -------------------------- | ----------------------- |
+| `apcdp.apnews.com/script.js`                 | AP News CDP / analytics    | 1,263 ms                |
+| `live.primis.tech/live/liveView.php`         | Video ad loader            | 436 ms                  |
+| `experiments.parsely.com/vip-experiments.js` | Parsely A/B                | 339 ms                  |
+| `cdn.cookielaw.org/.../OtAutoBlock.js`       | OneTrust (GDPR auto-block) | 258 ms                  |
 
 Total JS render-blocking penalty: **~2,296 ms** (desktop). These four scripts together with the CSS blocker (F1) account for roughly 4 seconds of blank-screen time before the browser can paint the server-rendered HTML that arrived in 40 ms.
 
@@ -134,6 +145,7 @@ In the DevTools Performance flame chart: these appear as purple "Evaluate Script
 **Fix**
 
 `OtAutoBlock.js` (OneTrust) **cannot** simply be deferred — it must block the page to suppress content before consent on applicable jurisdictions. However, it can be optimized:
+
 - Confirm with Legal whether the current consent configuration actually requires this blocking mode in your target regions. Many implementations over-apply it.
 - OneTrust provides an alternative non-blocking integration mode for regions where prior blocking is not required.
 
@@ -188,7 +200,7 @@ On the server-side template that renders the first article card, add `fetchprior
   alt="[story description]"
   width="1440"
   height="960"
->
+/>
 ```
 
 Do **not** add `loading="lazy"` to this element — `lazy` and `fetchpriority="high"` conflict. All other below-fold images should have `loading="lazy"`.
@@ -196,17 +208,21 @@ Do **not** add `loading="lazy"` to this element — `lazy` and `fetchpriority="h
 For the optional `<link rel="preload">` in `<head>` (further improvement): this requires the server to know which image URL will appear as the LCP element before the HTML is rendered, which is practical with SSR since the homepage content is server-assembled:
 
 ```html
-<link rel="preload" as="image" fetchpriority="high"
-      href="https://dims.apnews.com/dims4/default/.../format/webp/quality/90/?url=...">
+<link
+  rel="preload"
+  as="image"
+  fetchpriority="high"
+  href="https://dims.apnews.com/dims4/default/.../format/webp/quality/90/?url=..."
+/>
 ```
 
 For the video-in-LCP-slot problem: when the top story embeds a Primis video player as the hero, replace it with a static poster image in the initial render. On user click or play-button interaction, swap in the full video player:
 
 ```js
-document.querySelector('.hero-play-btn').addEventListener('click', () => {
+document.querySelector(".hero-play-btn").addEventListener("click", () => {
   // load Primis player only on user intent
-  const script = document.createElement('script');
-  script.src = 'https://live.primis.tech/live/liveView.php?...';
+  const script = document.createElement("script");
+  script.src = "https://live.primis.tech/live/liveView.php?...";
   document.body.appendChild(script);
 });
 ```
@@ -305,14 +321,14 @@ optimization: {
 
 40 distinct third-party origins load on the homepage. All execute upfront, during the critical loading window. Key offenders by main-thread time (desktop Lighthouse `third-parties-insight`):
 
-| Vendor | Main thread (ms) | Transfer (KB) | Loading mode |
-|---|---|---|---|
-| Wunderkind (behavioral popup) | 3,181 | 242.5 | Synchronous, early |
-| primis.tech HLS video player | 2,181 | 3,202.6 | Synchronous, early |
-| confiant-integrations.net | 561 | 217.3 | Synchronous |
-| Quantcast | 557 | 259 | Synchronous |
-| Google Tag Manager | 475 | 334 | Synchronous |
-| Nativo | 416 | 989.6 | Synchronous |
+| Vendor                        | Main thread (ms) | Transfer (KB) | Loading mode       |
+| ----------------------------- | ---------------- | ------------- | ------------------ |
+| Wunderkind (behavioral popup) | 3,181            | 242.5         | Synchronous, early |
+| primis.tech HLS video player  | 2,181            | 3,202.6       | Synchronous, early |
+| confiant-integrations.net     | 561              | 217.3         | Synchronous        |
+| Quantcast                     | 557              | 259           | Synchronous        |
+| Google Tag Manager            | 475              | 334           | Synchronous        |
+| Nativo                        | 416              | 989.6         | Synchronous        |
 
 Total identified third-party main-thread time: **~9,900 ms** (desktop). Total third-party transfer: **9,723 KB** (68% of total page transfer).
 
@@ -335,11 +351,11 @@ There is no single code change here — this requires decisions about which vend
 ```js
 // Load Wunderkind only after user has been on the page for 3 seconds
 // and only if they are not a subscriber (check cookie/session)
-window.addEventListener('load', () => {
+window.addEventListener("load", () => {
   setTimeout(() => {
     if (!userIsSubscriber()) {
-      const s = document.createElement('script');
-      s.src = 'https://tag.bounceexchange.com/...';
+      const s = document.createElement("script");
+      s.src = "https://tag.bounceexchange.com/...";
       document.body.appendChild(s);
     }
   }, 3000);
@@ -349,17 +365,22 @@ window.addEventListener('load', () => {
 **primis.tech (2,181 ms, 3,202 KB):** The HLS video player library (`hls.min.js`, 544 KB, 91% unused) downloads even when no video ad is in the viewport. Use a facade — show a placeholder, load the real player on IntersectionObserver trigger:
 
 ```js
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      // Replace placeholder with actual Primis embed
-      loadPrimisPlayer(entry.target);
-      observer.unobserve(entry.target);
-    }
-  });
-}, { rootMargin: '200px' });
+const observer = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        // Replace placeholder with actual Primis embed
+        loadPrimisPlayer(entry.target);
+        observer.unobserve(entry.target);
+      }
+    });
+  },
+  { rootMargin: "200px" },
+);
 
-document.querySelectorAll('.primis-placeholder').forEach(el => observer.observe(el));
+document
+  .querySelectorAll(".primis-placeholder")
+  .forEach((el) => observer.observe(el));
 ```
 
 **Google Tag Manager:** Move all non-critical tag firing rules to fire on `DOMContentLoaded` or `window.load` instead of immediately. This is configured in the GTM interface, not in code.
@@ -383,6 +404,7 @@ AP News uses the DIMS CDN for all editorial images, which supports format, resiz
 3. **Quality 90 on thumbnails:** DIMS URLs use `quality/90`. For news thumbnails viewed at small display sizes, quality 75–80 is visually indistinguishable to readers and reduces file size by 15–30%.
 
 A representative DIMS URL from the audit:
+
 ```
 https://dims.apnews.com/dims4/default/[hash]/2147483647/strip/true/crop/3000x2000+0+0/resize/1440x960/quality/90/format/webp/https://storage.googleapis.com/afs-prod/media/...
 ```
@@ -410,7 +432,7 @@ The server-side template that generates each `<img>` should pass the rendered di
   "
   sizes="(max-width: 600px) 480px, 960px"
   alt="[story description]"
->
+/>
 ```
 
 **Switch to AVIF with WebP fallback:**
@@ -419,12 +441,14 @@ Change `format/webp` to `format/avif` in the primary URL. Add a `format/webp` sr
 
 ```html
 <picture>
-  <source type="image/avif"
-    srcset="https://dims.apnews.com/.../format/avif/... 1x">
+  <source
+    type="image/avif"
+    srcset="https://dims.apnews.com/.../format/avif/... 1x"
+  />
   <img
     src="https://dims.apnews.com/.../format/webp/..."
     alt="[story description]"
-  >
+  />
 </picture>
 ```
 
@@ -466,9 +490,10 @@ In the `@font-face` declarations (which are in `All.min.gz.css`), add `font-disp
 
 ```css
 @font-face {
-  font-family: 'APW05-Condensed';
-  src: url('https://assets.apnews.com/.../APW05-Condensed.woff2') format('woff2');
-  font-display: swap;   /* add this */
+  font-family: "APW05-Condensed";
+  src: url("https://assets.apnews.com/.../APW05-Condensed.woff2")
+    format("woff2");
+  font-display: swap; /* add this */
 }
 ```
 
@@ -476,7 +501,7 @@ In the `@font-face` declarations (which are in `All.min.gz.css`), add `font-disp
 
 ```css
 body {
-  font-family: 'APW05-Condensed', 'Arial Narrow', Arial, sans-serif;
+  font-family: "APW05-Condensed", "Arial Narrow", Arial, sans-serif;
 }
 ```
 
@@ -486,8 +511,8 @@ For fonts that are purely decorative or not used above the fold, use `font-displ
 
 ```css
 @font-face {
-  font-family: 'APW05-Decorative';
-  src: url('...') format('woff2');
+  font-family: "APW05-Decorative";
+  src: url("...") format("woff2");
   font-display: optional;
 }
 ```
@@ -508,14 +533,14 @@ The Lighthouse `forced-reflow-insight` audit is flagged. Multiple scripts read l
 
 Top offenders from the audit:
 
-| Script | Forced reflow time |
-|---|---|
-| `cdn.jwplayer.com/libraries/8z1I5w4s.js` | 517.7 ms |
+| Script                                            | Forced reflow time             |
+| ------------------------------------------------- | ------------------------------ |
+| `cdn.jwplayer.com/libraries/8z1I5w4s.js`          | 517.7 ms                       |
 | `assets.apnews.com/.../All.min.gz.js` (AP bundle) | 143.9 ms + 123.3 ms = 267.2 ms |
-| `securepubads.g.doubleclick.net/pubads_impl.js` | 152.2 ms |
-| `apcdp.apnews.com/plugin/library/...` | 153.1 ms + 89.5 ms = 242.6 ms |
-| `imasdk.googleapis.com/js/sdkloader/ima3.js` | 143.0 ms + 100.5 ms = 243.5 ms |
-| `cdn.cookielaw.org/.../otBannerSdk.js` | 142.7 ms + 82.5 ms = 225.2 ms |
+| `securepubads.g.doubleclick.net/pubads_impl.js`   | 152.2 ms                       |
+| `apcdp.apnews.com/plugin/library/...`             | 153.1 ms + 89.5 ms = 242.6 ms  |
+| `imasdk.googleapis.com/js/sdkloader/ima3.js`      | 143.0 ms + 100.5 ms = 243.5 ms |
+| `cdn.cookielaw.org/.../otBannerSdk.js`            | 142.7 ms + 82.5 ms = 225.2 ms  |
 
 **Reproduce**
 
@@ -529,19 +554,20 @@ DevTools Performance tab → record load → in the flame chart, look for yellow
 
 ```js
 // Bad — read → write → read → write (forces layout twice)
-const h1 = el1.offsetHeight;  // read → layout forced
-el1.style.height = h1 + 'px'; // write
-const h2 = el2.offsetHeight;  // read → layout forced again
-el2.style.height = h2 + 'px'; // write
+const h1 = el1.offsetHeight; // read → layout forced
+el1.style.height = h1 + "px"; // write
+const h2 = el2.offsetHeight; // read → layout forced again
+el2.style.height = h2 + "px"; // write
 
 // Good — read all, write all (layout forced once)
-const h1 = el1.offsetHeight;  // read
-const h2 = el2.offsetHeight;  // read (no layout forced — no write between reads)
-el1.style.height = h1 + 'px'; // write
-el2.style.height = h2 + 'px'; // write
+const h1 = el1.offsetHeight; // read
+const h2 = el2.offsetHeight; // read (no layout forced — no write between reads)
+el1.style.height = h1 + "px"; // write
+el2.style.height = h2 + "px"; // write
 ```
 
 **For JW Player (517 ms):** This is a third-party library. You cannot change its source. Mitigations:
+
 - Load JW Player lazily (only when a video is in or near the viewport, via IntersectionObserver). The forced reflow only costs time when the library runs — delaying its execution to after page load removes it from the critical window.
 - Upgrade to the latest JW Player version; layout-thrashing bugs are commonly fixed in newer releases.
 
@@ -564,6 +590,7 @@ Warm load (same session, soft refresh): 9,445,245 bytes transferred (242 request
 Reduction: **1.08%** — essentially no benefit from having visited once.
 
 Only 3 requests resolved from cache on the warm run. The high-byte resources (JS, CSS, images, third-party scripts) are re-fetched on every load. This suggests:
+
 - The main HTML document likely has a short `max-age` (expected for live news), but so do many static assets.
 - `immutable` cache directives may not be set on hashed static assets, causing browsers to issue revalidation requests even for files whose names encode their content.
 
@@ -586,6 +613,7 @@ The `immutable` directive tells the browser this URL will never change (because 
 This change is made in the CDN or origin server configuration for `assets.apnews.com`:
 
 **Apache (`.htaccess`):**
+
 ```
 <FilesMatch "\.[0-9a-f]{8,}\.(js|css)$">
   Header set Cache-Control "public, max-age=31536000, immutable"
@@ -593,6 +621,7 @@ This change is made in the CDN or origin server configuration for `assets.apnews
 ```
 
 **Nginx:**
+
 ```nginx
 location ~* \.[0-9a-f]{8,}\.(js|css)$ {
   add_header Cache-Control "public, max-age=31536000, immutable";
@@ -642,11 +671,13 @@ Lighthouse Accessibility audit score: 76 (mobile), 79 (desktop). The audit flags
 ```
 
 If the icon is an `<img>`:
+
 ```html
-<img src="icon-share.svg" alt="Share">
+<img src="icon-share.svg" alt="Share" />
 ```
 
 For icon font characters (e.g., using `:before` pseudo-element):
+
 ```html
 <button class="share-btn" aria-label="Share this story">
   <span class="icon icon-share" aria-hidden="true"></span>
@@ -656,13 +687,18 @@ For icon font characters (e.g., using `:before` pseudo-element):
 **Fix — images without alt:**
 
 Every `<img>` must have an `alt` attribute. For meaningful images (news photographs):
+
 ```html
-<img src="photo.jpg" alt="President Biden signs the infrastructure bill at the White House">
+<img
+  src="photo.jpg"
+  alt="President Biden signs the infrastructure bill at the White House"
+/>
 ```
 
 For decorative images that convey no information:
+
 ```html
-<img src="decorative-divider.svg" alt="">
+<img src="decorative-divider.svg" alt="" />
 ```
 
 Empty `alt=""` is correct and intentional for decorative images — it tells screen readers to skip the element.
@@ -670,10 +706,11 @@ Empty `alt=""` is correct and intentional for decorative images — it tells scr
 **Fix — heading order:**
 
 Open the page in DevTools → Console → run:
+
 ```js
-[...document.querySelectorAll('h1,h2,h3,h4,h5,h6')]
-  .map(h => `${h.tagName}: ${h.textContent.trim().substring(0, 50)}`)
-  .forEach(s => console.log(s));
+[...document.querySelectorAll("h1,h2,h3,h4,h5,h6")]
+  .map((h) => `${h.tagName}: ${h.textContent.trim().substring(0, 50)}`)
+  .forEach((s) => console.log(s));
 ```
 
 This prints the full heading hierarchy. Fix skipped levels by either: changing the heading level in the template, or using `role="heading" aria-level="2"` if the visual style must be preserved independently of the semantic level.
@@ -711,7 +748,7 @@ For the ad slot at the top of the page: reserve the ad container's dimensions be
 
 ```css
 .ad-slot-hero {
-  min-height: 250px;   /* reserve space matching the expected ad size */
+  min-height: 250px; /* reserve space matching the expected ad size */
   width: 100%;
 }
 ```
@@ -743,4 +780,4 @@ For the header injection: wrap the Zephr/OneTrust header widget in a container w
 
 ---
 
-*The executive-facing version of this report, with findings translated to business risk and opportunity, is in `executive-report.md`.*
+_The executive-facing version of this report, with findings translated to business risk and opportunity, is in `executive-report.md`._
