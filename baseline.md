@@ -373,6 +373,7 @@ Lighthouse detected **2 layout shifts** (desktop, CLS: 0.064):
 AP News uses **Server-Side Rendering (SSR)** across all page types — homepage, section pages (`/entertainment`, `/hub/*`), article pages (`/article/*`), photo galleries (`/photo-gallery/*`), the search page (`/search`), and static utility pages (`/donate`).
 
 **Evidence of SSR:**
+
 - TTFB is 40 ms on both desktop and mobile runs. The server responds almost instantly with a fully-populated HTML document — content is not injected client-side after a blank shell arrives.
 - The HTML payload contains complete article headlines, images, and structured content without requiring JavaScript to execute first.
 - There is no detectable client-side routing framework (no React Router, Next.js, Nuxt, or similar SPA shell pattern). Each navigation triggers a full server round trip and a new HTML document.
@@ -388,14 +389,14 @@ The initial HTML shell is server-rendered, but the results grid itself is popula
 
 ### How does this affect users? Are there tradeoffs?
 
-| Aspect | Effect on users |
-| --- | --- |
-| Fast TTFB (40 ms) | Browser receives HTML immediately — good for SEO crawlers and users on fast networks |
-| Full-page hydration | After HTML arrives, the browser must download, parse, compile, and execute 441 KB of JS before the page becomes interactive — this is the dominant cause of TBT 4,530 ms (desktop) and 18,020 ms (mobile) |
-| All-routes monolithic bundle | Every page type (homepage, article, gallery, quiz) loads code for all other page types. 78.5% of the JS bundle is unused on the homepage. Users pay a hydration tax for features they will never use on the current route. |
-| SSR HTML with blocking render path | SSR sends content fast, but the render-blocking CSS (1,882 ms) and JS (2,296 ms) in `<head>` mean the browser cannot paint that content until those resources are resolved. The SSR speed advantage is effectively cancelled before first paint. |
-| No SSG/ISR | Each request is server-rendered dynamically, which is appropriate for live news. The tradeoff is that caching full HTML at the CDN edge is harder, which means every user triggers a new server render rather than receiving a cached pre-built page. |
-| Search page CSR results | On slow connections or devices, the page appears to load but shows no results until the client-side fetch completes, which can feel broken or slow. |
+| Aspect                             | Effect on users                                                                                                                                                                                                                                       |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fast TTFB (40 ms)                  | Browser receives HTML immediately — good for SEO crawlers and users on fast networks                                                                                                                                                                  |
+| Full-page hydration                | After HTML arrives, the browser must download, parse, compile, and execute 441 KB of JS before the page becomes interactive — this is the dominant cause of TBT 4,530 ms (desktop) and 18,020 ms (mobile)                                             |
+| All-routes monolithic bundle       | Every page type (homepage, article, gallery, quiz) loads code for all other page types. 78.5% of the JS bundle is unused on the homepage. Users pay a hydration tax for features they will never use on the current route.                            |
+| SSR HTML with blocking render path | SSR sends content fast, but the render-blocking CSS (1,882 ms) and JS (2,296 ms) in `<head>` mean the browser cannot paint that content until those resources are resolved. The SSR speed advantage is effectively cancelled before first paint.      |
+| No SSG/ISR                         | Each request is server-rendered dynamically, which is appropriate for live news. The tradeoff is that caching full HTML at the CDN edge is harder, which means every user triggers a new server render rather than receiving a cached pre-built page. |
+| Search page CSR results            | On slow connections or devices, the page appears to load but shows no results until the client-side fetch completes, which can feel broken or slow.                                                                                                   |
 
 ### Is this a good choice? Is it the best choice?
 
