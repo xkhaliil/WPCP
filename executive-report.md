@@ -1,4 +1,5 @@
 # AP News — Performance Audit
+
 ## Executive Summary
 
 **Audit date:** July 2026  
@@ -23,12 +24,12 @@ You can verify any number in this report yourself at **pagespeed.web.dev** — e
 
 ## How Slow Is It, in Terms That Matter
 
-| Measure | AP News today | Google's "good" threshold | Gap |
-|---|---|---|---|
-| Time until the main story is visible (desktop) | 17.2 seconds | 2.5 seconds | 7× over |
-| Time until the main story is visible (mobile) | 54.3 seconds | 2.5 seconds | 22× over |
-| Time until a reader can tap or scroll (mobile) | 56.8 seconds | — | — |
-| Google Performance score | 25 / 100 | 90 / 100 | Bottom quartile |
+| Measure                                        | AP News today | Google's "good" threshold | Gap             |
+| ---------------------------------------------- | ------------- | ------------------------- | --------------- |
+| Time until the main story is visible (desktop) | 17.2 seconds  | 2.5 seconds               | 7× over         |
+| Time until the main story is visible (mobile)  | 54.3 seconds  | 2.5 seconds               | 22× over        |
+| Time until a reader can tap or scroll (mobile) | 56.8 seconds  | —                         | —               |
+| Google Performance score                       | 25 / 100      | 90 / 100                  | Bottom quartile |
 
 Google's own research shows that **53% of mobile visitors leave a page that takes longer than 3 seconds to load.** AP News's mobile load time is 54 seconds under standard mobile network conditions. The majority of mobile visitors are gone before the headline appears.
 
@@ -134,14 +135,14 @@ Three areas are genuinely well-executed and should be maintained:
 
 ## The Investment Framing
 
-| Finding | Effort | Who benefits | When you see it |
-|---|---|---|---|
-| 1. Clear the rendering path | 1 sprint | All visitors, all pages | Immediately after deploy |
-| 2. Discipline ad-tech loading | 1–2 sprints | All visitors; ad revenue | Within 2–4 weeks |
-| 3. Hero image priority | 1 day | All visitors, homepage + hubs | Same day |
-| 4. JavaScript bundle splitting | 2–3 sprints | All visitors; long-term ceiling | After rollout |
-| 5. Return-visit caching | 1 sprint | Subscribers, loyal readers | Immediately after deploy |
-| 6. Accessibility fixes | 1–2 sprints | Screen-reader users | After rollout |
+| Finding                        | Effort      | Who benefits                    | When you see it          |
+| ------------------------------ | ----------- | ------------------------------- | ------------------------ |
+| 1. Clear the rendering path    | 1 sprint    | All visitors, all pages         | Immediately after deploy |
+| 2. Discipline ad-tech loading  | 1–2 sprints | All visitors; ad revenue        | Within 2–4 weeks         |
+| 3. Hero image priority         | 1 day       | All visitors, homepage + hubs   | Same day                 |
+| 4. JavaScript bundle splitting | 2–3 sprints | All visitors; long-term ceiling | After rollout            |
+| 5. Return-visit caching        | 1 sprint    | Subscribers, loyal readers      | Immediately after deploy |
+| 6. Accessibility fixes         | 1–2 sprints | Screen-reader users             | After rollout            |
 
 Items 1, 3, and 5 can be delivered in a single focused sprint and would produce measurable improvements in Google's public performance score, search ranking signals, and reader-facing load times within weeks of deployment.
 
@@ -151,4 +152,4 @@ Item 6 addresses legal and inclusion risk independently of performance.
 
 ---
 
-*Full technical findings, root-cause analysis, and implementation specifications are available in the accompanying technical report.*
+_Full technical findings, root-cause analysis, and implementation specifications are available in the accompanying technical report._
