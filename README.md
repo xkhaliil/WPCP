@@ -1,4 +1,7 @@
+
 # Course Project Performance Audit Report
+
+Web performance audit of AP News (apnews.com), built as a course project.
 
 ## Target Website
 
@@ -15,8 +18,8 @@ AP News is a high-traffic, content-heavy news platform with a mix of article pag
 
 ## Main PageSpeed Insights Scores (Fresh Lighthouse Run)
 
-Homepage tested: https://apnews.com/  
-Measurement date: 2026-07-06  
+Homepage tested: https://apnews.com/
+Measurement date: 2026-07-06
 Method: Lighthouse (mobile default + desktop preset)
 
 ### Desktop
@@ -51,31 +54,40 @@ Method: Lighthouse (mobile default + desktop preset)
 
 ## Audit Focus Pages (8)
 
-1. **https://apnews.com/**  
+1. **https://apnews.com/**
    Main landing page with top stories, ads, and mixed content blocks. Critical for first impressions and overall site performance baseline.
 
-2. **https://apnews.com/entertainment**  
+2. **https://apnews.com/entertainment**
    Section hub page likely using a category template with many thumbnails and feed items. Useful for comparing section-page rendering against homepage.
 
-3. **https://apnews.com/hub/fifa-world-cup**  
+3. **https://apnews.com/hub/fifa-world-cup**
    Topic hub page with aggregated content. Important for evaluating repeated card layouts, pagination/infinite feeds, and caching behavior.
 
-4. **https://apnews.com/photo-gallery/world-cup-photos-mbappe-haaland-jimenez-57fd3b1070ed79152dfa89b7319f6139**  
+4. **https://apnews.com/photo-gallery/world-cup-photos-mbappe-haaland-jimenez-57fd3b1070ed79152dfa89b7319f6139**
    Media-heavy gallery page. Key for auditing image optimization, lazy loading, responsive image behavior, and visual stability.
 
-5. **https://apnews.com/article/world-cup-schedule-results-news-81645977a722c4020c9644d17589bdbb**  
+5. **https://apnews.com/article/world-cup-schedule-results-news-81645977a722c4020c9644d17589bdbb**
    Typical long-form article page. Essential for measuring real reading experience, ad/script impact, and Core Web Vitals on article templates.
 
-6. **https://apnews.com/hub/quizzes**  
+6. **https://apnews.com/hub/quizzes**
    Interactive content hub. Useful for testing JavaScript execution costs, interactivity delays, and Total Blocking Time patterns.
 
-7. **https://apnews.com/search?q=world+cup**  
+7. **https://apnews.com/search?q=world+cup**
    Search results page with dynamic query handling. Important for measuring backend/API latency effects and client-side rendering overhead.
 
-8. **https://apnews.com/donate**  
+8. **https://apnews.com/donate**
    Conversion-oriented page where speed directly affects user completion rates. Valuable for evaluating performance impact on business/goal outcomes.
 
 ## Assignment Artifacts
 
 - Baseline report: [baseline.md](baseline.md)
 - Findings report: [findings.md](findings.md)
+- Executive report: [executive-report.md](executive-report.md)
+- Implementer report: [implementer-report.md](implementer-report.md)
+- Raw Lighthouse results: [lighthouse-desktop.json](lighthouse-desktop.json), [lighthouse-mobile.json](lighthouse-mobile.json), [lighthouse-network-cold.json](lighthouse-network-cold.json), [lighthouse-network-warm.json](lighthouse-network-warm.json)
+
+<!-- TODO: summarize the key recommendations from executive-report.md and implementer-report.md -->
+
+## License
+
+No license file is present in this repository.
